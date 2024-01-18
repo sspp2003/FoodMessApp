@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/cardViewStudent"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="16dp">
+
+        <!-- Student Name TextView -->
+        <TextView
+            android:id="@+id/textViewName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_alignParentStart="true"/>
+
+        <!-- Student Phone Number TextView -->
+        <TextView
+            android:id="@+id/textViewPhoneNumber"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:layout_below="@+id/textViewName"
+            android:layout_alignParentStart="true"
+            android:textColor="@android:color/darker_gray" />
+
+        <!-- Delete Option -->
+        <ImageView
+            android:id="@+id/imageViewDelete"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:layout_alignParentEnd="true"
+            android:layout_centerVertical="true"
+            android:src="@android:drawable/ic_menu_delete"
+            android:contentDescription="Delete"
+            android:layout_marginStart="8dp"/>
+
+    </RelativeLayout>
+
+</androidx.cardview.widget.CardView>
