@@ -1,13 +1,17 @@
 package com.example.tastybites
 
 import android.content.Intent
+import android.content.pm.PackageManager
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.RadioGroup
 import android.widget.Toast
 import androidx.appcompat.app.AlertDialog
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -16,13 +20,18 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 
 class MainActivity : AppCompatActivity() {
 
+
     private lateinit var dbHelper: DatabaseHelper
     private lateinit var studentAdapter: StudentAdapter
     private lateinit var selectedMeal:String
-
+    private lateinit var feedbackButton: Button
+    private lateinit var checkFeedback:Button
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        feedbackButton = findViewById(R.id.buttonSendFeedback)
+        checkFeedback = findViewById(R.id.checkFeedback)
 
         dbHelper = DatabaseHelper(this)
 
@@ -30,6 +39,17 @@ class MainActivity : AppCompatActivity() {
         val radioGroupMealOptions:RadioGroup = findViewById(R.id.radioGroupMealType)
 
 
+        feedbackButton.setOnClickListener {
+            // Check for SMS permission before sending feedback request
+            val i = Intent(this,FeedbackActivity::class.java)
+            startActivity(i)
+        }
+
+
+        checkFeedback.setOnClickListener {
+            val j = Intent(this@MainActivity,CheckFeedbackActivity::class.java)
+            startActivity(j)
+        }
         // Setup RecyclerView for student management
         val recyclerView: RecyclerView = findViewById(R.id.recyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
@@ -60,6 +80,8 @@ class MainActivity : AppCompatActivity() {
             showAddStudentDialog()
         }
     }
+
+
 
     private fun showAddStudentDialog() {
         val builder = AlertDialog.Builder(this)

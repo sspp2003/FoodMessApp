@@ -3,8 +3,14 @@ package com.example.tastybites
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.Cursor
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
+import android.telephony.SmsManager
+import android.util.Log
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class DatabaseHelper(context: Context) :
     SQLiteOpenHelper(context, DATABASE_NAME, null, DATABASE_VERSION) {
@@ -29,6 +35,14 @@ class DatabaseHelper(context: Context) :
         private const val COLUMN_LUNCH = "lunch"
         private const val COLUMN_DINNER = "dinner"
 
+        const val TABLE_FEEDBACK = "feedback"
+        private const val COLUMN_FEEDBACK_ID = "feedback_id"
+        const val COLUMN_PHONE_NUMBER_FEEDBACK = "phone_number"
+        const val COLUMN_FEEDBACK_TEXT = "feedback_text"
+
+
+
+
         // Create table SQL statement
         private const val CREATE_TABLE_STUDENTS =
             "CREATE TABLE $TABLE_STUDENTS ($COLUMN_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -40,11 +54,17 @@ class DatabaseHelper(context: Context) :
                     "$COLUMN_STUDENT_ID INTEGER, $COLUMN_DATE TEXT, $COLUMN_BREAKFAST INTEGER, " +
                     "$COLUMN_LUNCH INTEGER, $COLUMN_DINNER INTEGER)"
 
+        // Create table SQL statement for feedback
+        private const val CREATE_TABLE_FEEDBACK =
+            "CREATE TABLE $TABLE_FEEDBACK ($COLUMN_FEEDBACK_ID INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "$COLUMN_PHONE_NUMBER_FEEDBACK TEXT, $COLUMN_FEEDBACK_TEXT TEXT)"
     }
 
     override fun onCreate(db: SQLiteDatabase?) {
+        Log.d("DatabaseHelper2", "onCreate method called")
         db?.execSQL(CREATE_TABLE_STUDENTS)
         db?.execSQL(CREATE_TABLE_ATTENDANCE)
+        db?.execSQL(CREATE_TABLE_FEEDBACK)
     }
 
     override fun onUpgrade(db: SQLiteDatabase?, oldVersion: Int, newVersion: Int) {
@@ -282,4 +302,144 @@ class DatabaseHelper(context: Context) :
             arrayOf(attendance.attendanceId.toString())
         )
     }
+
+    // SMS sending functions
+    fun getAllPhoneNumbers(): List<String> {
+        val phoneNumbers = mutableListOf<String>()
+        val selectQuery = "SELECT $COLUMN_PHONE_NUMBER FROM $TABLE_STUDENTS"
+
+        val db = this.readableDatabase
+        val cursor = db.rawQuery(selectQuery, null)
+
+        if (cursor.moveToFirst()) {
+            do {
+                val phoneNumber = cursor.getString(cursor.getColumnIndex(COLUMN_PHONE_NUMBER))
+                phoneNumbers.add(phoneNumber)
+            } while (cursor.moveToNext())
+        }
+
+        cursor.close()
+        db.close()
+
+        return phoneNumbers
+    }
+
+    fun addFeedback(phoneNumber: String?, feedbackText: String?): Long {
+        if (phoneNumber != null && feedbackText != null) {
+            val db = this.writableDatabase
+            val values = ContentValues().apply {
+                put(COLUMN_PHONE_NUMBER_FEEDBACK, phoneNumber)
+                put(COLUMN_FEEDBACK_TEXT, feedbackText)
+            }
+
+            val id = db.insert(TABLE_FEEDBACK, null, values)
+            db.close()
+
+            return id
+        } else {
+            Log.e("DatabaseHelper", "Phone number or feedback text is null")
+            return -1
+        }
+    }
+
+    fun deleteAttendanceForStudentAndMeal(studentId: Int, mealType: String): Int {
+        val db = this.writableDatabase
+        return db.delete(
+            TABLE_ATTENDANCE,
+            "$COLUMN_STUDENT_ID = ? AND " +
+                    when (mealType) {
+                        "Breakfast" -> "$COLUMN_BREAKFAST != -1"
+                        "Lunch" -> "$COLUMN_LUNCH != -1"
+                        "Dinner" -> "$COLUMN_DINNER != -1"
+                        else -> ""
+                    },
+            arrayOf(studentId.toString())
+        )
+    }
+
+    fun getAllFeedback(): List<String> {
+        val feedbackList = mutableListOf<String>()
+        val selectQuery = "SELECT * FROM $TABLE_FEEDBACK"
+
+        val db = this.readableDatabase
+        val cursor: Cursor = db.query(
+            TABLE_FEEDBACK,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+        )
+
+        if (cursor.moveToFirst()) {
+            do {
+                val phoneNumber =
+                    cursor.getString(cursor.getColumnIndex(COLUMN_PHONE_NUMBER_FEEDBACK))
+                val feedbackText = cursor.getString(cursor.getColumnIndex(COLUMN_FEEDBACK_TEXT))
+
+                // Combine phone number and feedback text for display
+                val feedback = "From: $phoneNumber\nFeedback: $feedbackText"
+                feedbackList.add(feedback)
+            } while (cursor.moveToNext())
+        }
+
+        cursor.close()
+        db.close()
+
+        return feedbackList
+    }
+    fun getAttendanceSummary(studentId: Int, mealType: String): Pair<Int, Int> {
+        val db = this.readableDatabase
+        val cursor = db.query(
+            TABLE_ATTENDANCE,
+            arrayOf(COLUMN_BREAKFAST, COLUMN_LUNCH, COLUMN_DINNER),
+            "$COLUMN_STUDENT_ID = ?",
+            arrayOf(studentId.toString()),
+            null,
+            null,
+            null
+        )
+
+        var absentCount = 0
+        var presentCount = 0
+
+        if (cursor.moveToFirst()) {
+            do {
+                when (mealType) {
+                    "Breakfast" -> {
+                        val breakfast = cursor.getInt(cursor.getColumnIndex(COLUMN_BREAKFAST))
+                        if (breakfast == 0) {
+                            absentCount++
+                        } else if (breakfast == 1) {
+                            presentCount++
+                        }
+                    }
+                    "Lunch" -> {
+                        val lunch = cursor.getInt(cursor.getColumnIndex(COLUMN_LUNCH))
+                        if (lunch == 0) {
+                            absentCount++
+                        } else if (lunch == 1) {
+                            presentCount++
+                        }
+                    }
+                    "Dinner" -> {
+                        val dinner = cursor.getInt(cursor.getColumnIndex(COLUMN_DINNER))
+                        if (dinner == 0) {
+                            absentCount++
+                        } else if (dinner == 1) {
+                            presentCount++
+                        }
+                    }
+                }
+            } while (cursor.moveToNext())
+        }
+
+        cursor.close()
+        db.close()
+
+        return Pair(absentCount, presentCount)
+    }
+
+
 }

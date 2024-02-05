@@ -1,9 +1,11 @@
 package com.example.tastybites
 
+import android.graphics.Paint
 import android.os.Bundle
 import android.util.Log
 import android.widget.Button
 import android.widget.CalendarView
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -22,10 +24,21 @@ class AttendanceActivity : AppCompatActivity() {
     private lateinit var dbHelper: DatabaseHelper
     private var selectedDate: String = ""
 
+    private lateinit var absent: TextView
+    private lateinit var present: TextView
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_attendance)
         dbHelper = DatabaseHelper(this)
+
+        val deleteAllTextView: TextView = findViewById(R.id.deleteAll)
+        deleteAllTextView.paintFlags = deleteAllTextView.paintFlags or Paint.UNDERLINE_TEXT_FLAG
+
+        absent = findViewById(R.id.absentCount)
+        present = findViewById(R.id.presentCount)
+
+
 
         studentId = intent.getIntExtra("STUDENT_ID", -1)
         selectedMeal = intent.getStringExtra("selectedMeal") ?: ""
@@ -63,6 +76,32 @@ class AttendanceActivity : AppCompatActivity() {
             selectedDate = String.format(Locale.getDefault(), "%04d-%02d-%02d", year, month + 1, dayOfMonth)
             Log.d("AttendanceActivity", "Selected Date: $selectedDate")
         }
+
+
+        attendanceCounter()
+
+        deleteAllTextView.setOnClickListener(){
+            val deletedRows = dbHelper.deleteAttendanceForStudentAndMeal(studentId, selectedMeal)
+            if (deletedRows > 0) {
+                attendanceCounter()
+                updateRecyclerView(studentId)
+            } else {
+                Toast.makeText(this,"Nothing to delete",Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun attendanceCounter(){
+        val attendanceSummary = dbHelper.getAttendanceSummary(studentId, selectedMeal)
+        if (attendanceSummary != null) {
+            val (absentCount, presentCount) = attendanceSummary
+            // Use absentCount and presentCount as needed
+            absent.text = "$absentCount"
+            present.text = "$presentCount"
+        } else {
+            absent.text = "" + 0
+            present.text = "" + 0
+        }
     }
 
     private fun markAttendance(student: Student, meal: String, status: String) {
@@ -78,7 +117,7 @@ class AttendanceActivity : AppCompatActivity() {
             // Create a new attendance record for the selected meal
             createNewAttendanceRecord(student, meal, status)
         }
-
+        attendanceCounter()
         // Update the RecyclerView after marking attendance
         updateRecyclerView(student.id)
     }
